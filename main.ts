@@ -25,10 +25,12 @@ async function main() {
     process.exit(1);
   }
 
-  const roomId = (await ask("🏠 Sala (padrão: room-1): ")) || "room-1";
-  const language = (await ask("🏳️  Idioma (padrão: pt-BR): ")) || "pt-BR";
+  const roomId = (await ask("🏠 Sala (padrão: room-1): ")).trim() || "room-1";
+  const language =
+    (await ask("🏳️  Idioma (padrão: pt-BR): ")).trim() || "pt-BR";
   const serverIp =
-    (await ask("🖥️  IP do Servidor (padrão: localhost): ")) || "localhost";
+    (await ask("🖥️  IP do Servidor (padrão: localhost): ")).trim() ||
+    "localhost";
 
   const playerId = `player-${randomUUID().split("-")[0]}`; // ID único curto
 

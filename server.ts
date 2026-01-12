@@ -55,7 +55,8 @@ wss.on("connection", (socket) => {
     const { type, roomId, playerId, language, name, content } = payload;
 
     if (type === "join") {
-      if (!roomId || !playerId || !language) {
+      const cleanLanguage = language ? language.trim() : null;
+      if (!roomId || !playerId || !cleanLanguage) {
         return;
       }
 
@@ -67,12 +68,12 @@ wss.on("connection", (socket) => {
 
       rooms[roomId][playerId] = {
         socket,
-        language,
+        language: cleanLanguage,
         name: displayName,
       };
 
       console.log(
-        `👋 Player ${displayName} (${playerId}) joined room ${roomId} [${language}]`
+        `👋 Player ${displayName} (${playerId}) joined room ${roomId} [${cleanLanguage}]`
       );
 
       // Notify others in room (optional, but good for feedback)
