@@ -48,8 +48,16 @@ export async function translate(
     }
 
     throw new Error("Invalid response from Azure Translator API");
-  } catch (error) {
-    console.error("Translation error:", error);
+  } catch (error: any) {
+    if (error.response) {
+      console.error(
+        "Translation API Error:",
+        error.response.status,
+        JSON.stringify(error.response.data)
+      );
+    } else {
+      console.error("Translation error:", error.message);
+    }
     // Fallback: retorna o texto original em caso de erro
     return text;
   }

@@ -120,6 +120,9 @@ wss.on("connection", (socket) => {
 
         if (targetPlayer && targetPlayer.socket.readyState === WebSocket.OPEN) {
           try {
+            console.log(
+              `🔤 Translating from ${senderLanguage} to ${targetPlayer.language}`
+            );
             // Translate message to target player's language
             const translatedText = await translate(
               content,

@@ -27,13 +27,15 @@ async function main() {
 
   const roomId = (await ask("🏠 Sala (padrão: room-1): ")) || "room-1";
   const language = (await ask("🏳️  Idioma (padrão: pt-BR): ")) || "pt-BR";
+  const serverIp =
+    (await ask("🖥️  IP do Servidor (padrão: localhost): ")) || "localhost";
 
   const playerId = `player-${randomUUID().split("-")[0]}`; // ID único curto
 
   console.log("\n⏳ Conectando ao servidor...");
 
   // 2. Conectar WebSocket
-  const ws = new WebSocket("ws://localhost:8080");
+  const ws = new WebSocket(`ws://${serverIp}:8080`);
 
   ws.on("open", () => {
     console.log(`✅ Conectado! ID: ${playerId}`);
