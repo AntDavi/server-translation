@@ -7,7 +7,7 @@ const wss = new WebSocketServer({ port: 8080 });
 interface Player {
   socket: WebSocket;
   language: string;
-  name: string;
+  // name: string;
 }
 
 interface Room {
@@ -52,7 +52,7 @@ wss.on("connection", (socket) => {
       return;
     }
 
-    const { type, roomId, playerId, language, name, content } = payload;
+    const { type, roomId, playerId, language, content } = payload;
 
     if (type === "join") {
       const cleanLanguage = language ? language.trim() : null;
@@ -64,22 +64,22 @@ wss.on("connection", (socket) => {
         rooms[roomId] = {};
       }
 
-      const displayName = name || playerId;
+      // const displayName = name || playerId;
 
       rooms[roomId][playerId] = {
         socket,
         language: cleanLanguage,
-        name: displayName,
+        // name: displayName,
       };
 
       console.log(
-        `👋 Player ${displayName} (${playerId}) joined room ${roomId} [${cleanLanguage}]`
+        `👋 Player ${playerId} joined room ${roomId} [${cleanLanguage}]`
       );
 
       // Notify others in room (optional, but good for feedback)
       const joinMessage = JSON.stringify({
         type: "info",
-        content: `${displayName} joined the room.`,
+        content: `${playerId} joined the room.`,
       });
 
       const currentRoom = rooms[roomId];
@@ -104,11 +104,9 @@ wss.on("connection", (socket) => {
 
       const sender = rooms[roomId][playerId];
       const senderLanguage = sender.language;
-      const senderName = sender.name;
+      // const senderName = sender.name;
 
-      console.log(
-        `💬 Message from ${senderName} (${playerId}) in ${roomId}: ${content}`
-      );
+      console.log(`💬 Message from ${playerId} in ${roomId}: ${content}`);
 
       // Broadcast to other players in the room
       const currentRoom = rooms[roomId];
@@ -134,7 +132,7 @@ wss.on("connection", (socket) => {
             const response = JSON.stringify({
               type: "message",
               fromId: playerId,
-              fromName: senderName,
+              fromName: playerId, // Fallback to ID since name is removed
               originalContent: content,
               translatedContent: translatedText,
               originalLanguage: senderLanguage,

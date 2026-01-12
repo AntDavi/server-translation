@@ -19,11 +19,11 @@ async function main() {
   console.log("============================================");
 
   // 1. Configurar Cliente
-  const name = await ask("👤 Seu Nome: ");
-  if (!name.trim()) {
-    console.log("❌ Nome é obrigatório!");
-    process.exit(1);
-  }
+  // const name = await ask("👤 Seu Nome: ");
+  // if (!name.trim()) {
+  //   console.log("❌ Nome é obrigatório!");
+  //   process.exit(1);
+  // }
 
   const roomId = (await ask("🏠 Sala (padrão: room-1): ")).trim() || "room-1";
   const language =
@@ -49,7 +49,7 @@ async function main() {
         type: "join",
         roomId,
         playerId,
-        name: name,
+        // name: name,
         language,
       })
     );
