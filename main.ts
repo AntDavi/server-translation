@@ -19,11 +19,11 @@ async function main() {
   console.log("============================================");
 
   // 1. Configurar Cliente
-  // const name = await ask("👤 Seu Nome: ");
-  // if (!name.trim()) {
-  //   console.log("❌ Nome é obrigatório!");
-  //   process.exit(1);
-  // }
+  const name = await ask("👤 Seu Nome: ");
+  if (!name.trim()) {
+    console.log("❌ Nome é obrigatório!");
+    process.exit(1);
+  }
 
   const roomId = (await ask("🏠 Sala (padrão: room-1): ")).trim() || "room-1";
   const language =
@@ -49,7 +49,7 @@ async function main() {
         type: "join",
         roomId,
         playerId,
-        // name: name,
+        name: name,
         language,
       })
     );
@@ -85,7 +85,29 @@ async function main() {
 
   // 3. Loop de Input de Mensagem
   rl.on("line", (line) => {
-    if (line.trim() && ws.readyState === WebSocket.OPEN) {
+    const trimmed = line.trim();
+    if (trimmed && ws.readyState === WebSocket.OPEN) {
+      if (trimmed.startsWith("/lang ")) {
+        const newLang = trimmed.split(" ")[1];
+        if (newLang) {
+          ws.send(
+            JSON.stringify({
+              type: "change-language",
+              roomId,
+              playerId,
+              language: newLang,
+            })
+          );
+          console.log(
+            `\x1b[90mℹ️  Solicitando troca de idioma para: ${newLang}\x1b[0m`
+          );
+        } else {
+          console.log(`\x1b[91m❌ Use: /lang <código>\x1b[0m`);
+        }
+        rl.prompt(true);
+        return;
+      }
+
       // Pula uma linha no console do próprio remetente para não sobrescrever
       readline.moveCursor(process.stdout, 0, -1);
       readline.clearLine(process.stdout, 0);

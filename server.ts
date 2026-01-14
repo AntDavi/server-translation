@@ -7,7 +7,7 @@ const wss = new WebSocketServer({ port: 8080 });
 interface Player {
   socket: WebSocket;
   language: string;
-  // name: string;
+  name: string;
 }
 
 interface Room {
@@ -64,12 +64,12 @@ wss.on("connection", (socket) => {
         rooms[roomId] = {};
       }
 
-      // const displayName = name || playerId;
+      const displayName = payload.name || playerId;
 
       rooms[roomId][playerId] = {
         socket,
         language: cleanLanguage,
-        // name: displayName,
+        name: displayName,
       };
 
       console.log(
@@ -97,6 +97,21 @@ wss.on("connection", (socket) => {
       }
     }
 
+    if (type === "change-language") {
+      const cleanLanguage = language ? language.trim() : null;
+
+      if (roomId && playerId && cleanLanguage) {
+        if (rooms[roomId] && rooms[roomId][playerId]) {
+          const oldLang = rooms[roomId][playerId].language;
+          rooms[roomId][playerId].language = cleanLanguage;
+
+          console.log(
+            `🔄 Player ${playerId} changed language from ${oldLang} to ${cleanLanguage}`
+          );
+        }
+      }
+    }
+
     if (type === "message") {
       if (!rooms[roomId] || !rooms[roomId][playerId]) {
         return;
@@ -104,7 +119,7 @@ wss.on("connection", (socket) => {
 
       const sender = rooms[roomId][playerId];
       const senderLanguage = sender.language;
-      // const senderName = sender.name;
+      const senderName = sender.name;
 
       console.log(`💬 Message from ${playerId} in ${roomId}: ${content}`);
 
@@ -113,7 +128,7 @@ wss.on("connection", (socket) => {
       if (!currentRoom) return;
 
       for (const targetPlayerId in currentRoom) {
-        // if (targetPlayerId === playerId) continue; // Uncomment if you don't want echo
+        if (targetPlayerId === playerId) continue; // Uncomment if you don't want echo
 
         const targetPlayer = currentRoom[targetPlayerId];
 

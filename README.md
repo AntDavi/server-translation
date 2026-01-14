@@ -93,6 +93,19 @@ O servidor processa a mensagem e envia para **todos os outros** jogadores da sal
 ```
 *Nota: Se o destinatário também for `pt-BR`, `translatedContent` será igual ao original.*
 
+### 4. Mudar de Idioma (`change-language`)
+Permite alterar o idioma de recebimento sem precisar desconectar e reconectar.
+
+**Envio (Cliente -> Servidor):**
+```json
+{
+  "type": "change-language",
+  "roomId": "sala-01",
+  "playerId": "jogador-123",
+  "language": "es-ES"
+}
+```
+
 ---
 
 ## 🧪 Como Testar
@@ -115,6 +128,9 @@ npx tsx main.ts
    - **Idioma:** Seu código de idioma (ex: `pt-BR`, `en-US`).
 
 4. Converse no terminal! As mensagens serão traduzidas automaticamente dependendo do idioma escolhido por cada cliente.
+
+> **Dica:** Durante o chat, use o comando `/lang <codigo>` para mudar seu idioma em tempo real.
+> Exemplo: `/lang ja-JP` mudará suas traduções recebidas para Japonês.
 
 ---
 
