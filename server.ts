@@ -7,7 +7,7 @@ const wss = new WebSocketServer({ port: 8080 });
 interface Player {
   socket: WebSocket;
   language: string;
-  name: string;
+  //   name: string;
 }
 
 interface Room {
@@ -69,11 +69,11 @@ wss.on("connection", (socket) => {
       rooms[roomId][playerId] = {
         socket,
         language: cleanLanguage,
-        name: displayName,
+        // name: displayName,
       };
 
       console.log(
-        `👋 Player ${playerId} joined room ${roomId} [${cleanLanguage}]`
+        `👋 Player ${playerId} joined room ${roomId} [${cleanLanguage}]`,
       );
 
       // Notify others in room (optional, but good for feedback)
@@ -106,7 +106,7 @@ wss.on("connection", (socket) => {
           rooms[roomId][playerId].language = cleanLanguage;
 
           console.log(
-            `🔄 Player ${playerId} changed language from ${oldLang} to ${cleanLanguage}`
+            `🔄 Player ${playerId} changed language from ${oldLang} to ${cleanLanguage}`,
           );
         }
       }
@@ -119,7 +119,7 @@ wss.on("connection", (socket) => {
 
       const sender = rooms[roomId][playerId];
       const senderLanguage = sender.language;
-      const senderName = sender.name;
+      //   const senderName = sender.name;
 
       console.log(`💬 Message from ${playerId} in ${roomId}: ${content}`);
 
@@ -128,20 +128,20 @@ wss.on("connection", (socket) => {
       if (!currentRoom) return;
 
       for (const targetPlayerId in currentRoom) {
-        if (targetPlayerId === playerId) continue; // Uncomment if you don't want echo
+        // if (targetPlayerId === playerId) continue;
 
         const targetPlayer = currentRoom[targetPlayerId];
 
         if (targetPlayer && targetPlayer.socket.readyState === WebSocket.OPEN) {
           try {
             console.log(
-              `🔤 Translating from ${senderLanguage} to ${targetPlayer.language}`
+              `🔤 Translating from (auto) to ${targetPlayer.language}`,
             );
             // Translate message to target player's language
             const translatedText = await translate(
               content,
-              senderLanguage,
-              targetPlayer.language
+              undefined,
+              targetPlayer.language,
             );
 
             const response = JSON.stringify({

@@ -9,13 +9,22 @@ const REGION = process.env.AZURE_REGION || "";
 
 export async function translate(
   text: string,
-  from: string,
-  to: string
+  from: string | null | undefined,
+  to: string,
 ): Promise<string> {
   // Se for a mesma língua, retorna o texto original
-  if (from === to) return text;
+  if (from && from === to) return text;
 
   try {
+    const params: any = {
+      "api-version": "3.0",
+      to: to,
+    };
+
+    if (from) {
+      params.from = from;
+    }
+
     const response = await axios({
       baseURL: ENDPOINT,
       url: "/translate",
@@ -25,11 +34,7 @@ export async function translate(
         "Ocp-Apim-Subscription-Region": REGION,
         "Content-type": "application/json",
       },
-      params: {
-        "api-version": "3.0",
-        from: from,
-        to: to,
-      },
+      params: params,
       data: [
         {
           text: text,
@@ -53,7 +58,7 @@ export async function translate(
       console.error(
         "Translation API Error:",
         error.response.status,
-        JSON.stringify(error.response.data)
+        JSON.stringify(error.response.data),
       );
     } else {
       console.error("Translation error:", error.message);
