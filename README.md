@@ -19,9 +19,12 @@ Este projeto é um servidor WebSocket em Node.js projetado para intermediar sala
 
 ### 2. Instalação
 Clone o projeto e instale as dependências:
+
 ```bash
-pnpm install
-# ou
+# Para clonar o projeto
+git clone https://github.com/AntDavi/server-translation.git
+
+# Instale as dependecias com
 npm install
 ```
 
@@ -36,18 +39,19 @@ AZURE_REGION=brazilsouth
 
 ### 4. Rodando o Servidor
 ```bash
-# Modo de desenvolvimento (reinicia ao salvar)
-pnpm dev
-
-# Modo de produção
-pnpm start
+# Para iniciar o servidor
+npm run dev
 ```
-
 ---
 
 ## 📡 Protocolo de Comunicação (WebSocket)
 
 O servidor roda por padrão na porta **8080**.
+Mas é possivel fazer essa alteração em server.ts
+
+```
+const wss = new WebSocketServer({ port: 8080 });
+```
 
 ### 1. Conectar e Entrar na Sala (`join`)
 Assim que conectar o socket, envie este JSON para registrar o jogador e identificar seu nome.
@@ -133,133 +137,3 @@ npx tsx main.ts
 > Exemplo: `/lang ja-JP` mudará suas traduções recebidas para Japonês.
 
 ---
-
-## 🎮 Integração com Unity (Netcode for GameObjects)
-
-Abaixo está um exemplo de arquitetura de como integrar este servidor em um projeto Unity. Recomenda-se usar a biblioteca [NativeWebSocket](https://github.com/endel/NativeWebSocket) para lidar com WS na Unity.
-
-### Exemplo: `ChatManager.cs`
-
-Este script pega o ID do jogador do **Netcode for GameObjects** (`NetworkManager.Singleton.LocalClientId`) para usar como `playerId` no chat, garantindo sincronia entre o jogo e o chat.
-
-```csharp
-using UnityEngine;
-using NativeWebSocket;
-using Unity.Netcode;
-using System.Text;
-using System.Threading.Tasks;
-
-// Requer pacote Newtonsoft.Json (comum em projetos Unity modernos)
-using Newtonsoft.Json; 
-
-public class ChatManager : NetworkBehaviour
-{
-    WebSocket websocket;
-    public string serverUrl = "ws://localhost:8080";
-    
-    // Configurações do Lobby
-    public string currentRoomId = "lobby-geral";
-    public string myLanguage = "pt-BR"; // Isso pode vir de um PlayerPrefs
-
-    async void Start()
-    {
-        // Só conecta se o Netcode já estiver rodando ou conecta manualmente
-        if (NetworkManager.Singleton.IsClient)
-        {
-            await ConnectToChat();
-        }
-    }
-
-    void Update()
-    {
-        #if !UNITY_WEBGL || UNITY_EDITOR
-            websocket?.DispatchMessageQueue();
-        #endif
-    }
-
-    private async Task ConnectToChat()
-    {
-        websocket = new WebSocket(serverUrl);
-
-        websocket.OnOpen += () =>
-        {
-            Debug.Log("Chat Conectado!");
-            SendJoin();
-        };
-
-        websocket.OnError += (e) => Debug.Log("Erro Chat: " + e);
-        websocket.OnClose += (e) => Debug.Log("Chat Fechado: " + e);
-
-        websocket.OnMessage += (bytes) =>
-        {
-            var message = Encoding.UTF8.GetString(bytes);
-            HandleMessage(message);
-        };
-
-        await websocket.Connect();
-    }
-
-    private void SendJoin()
-    {
-        // Usa o ID do Netcode para vincular o jogador do jogo ao chat
-        ulong netcodeId = NetworkManager.Singleton.LocalClientId;
-
-        var payload = new
-        {
-            type = "join",
-            roomId = currentRoomId,
-            playerId = "player-" + netcodeId, // Ex: player-0, player-1
-            name = "Player " + netcodeId, // Nome que aparecerá para os outros
-            language = myLanguage
-        };
-
-        SendJson(payload);
-    }
-
-    public void SendChatMessage(string text)
-    {
-        ulong netcodeId = NetworkManager.Singleton.LocalClientId;
-
-        var payload = new
-        {
-            type = "message",
-            roomId = currentRoomId,
-            playerId = "player-" + netcodeId,
-            content = text
-        };
-
-        SendJson(payload);
-    }
-
-    private void HandleMessage(string json)
-    {
-        // Exemplo simples de parsing usando JsonUtility ou Newtonsoft
-        // Dica: Crie classes para mapear o JSON recebido
-        Debug.Log("Mensagem Recebida: " + json);
-        
-        // Aqui você atualizaria a UI do chat na tela (TextMeshPro)
-    }
-
-    private async void SendJson(object data)
-    {
-        if (websocket.State == WebSocketState.Open)
-        {
-            string json = JsonConvert.SerializeObject(data);
-            await websocket.SendText(json);
-        }
-    }
-
-    private async void OnApplicationQuit()
-    {
-        if (websocket != null) await websocket.Close();
-    }
-}
-```
-
-### Fluxo na Unity:
-1. O jogo inicia e conecta ao Netcode (Host/Client).
-2. O `ChatManager` inicializa o WebSocket.
-3. No `OnOpen`, ele envia o `join` usando o ID do Netcode.
-4. Quando o jogador digita no InputField da UI e aperta Enter, chama `SendChatMessage`.
-5. O servidor traduz e devolve.
-6. O `OnMessage` recebe o JSON, desserializa e exibe o texto (`translatedContent`) na UI do jogo.
