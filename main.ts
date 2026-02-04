@@ -51,7 +51,7 @@ async function main() {
         playerId,
         name: name,
         language,
-      })
+      }),
     );
   });
 
@@ -96,13 +96,34 @@ async function main() {
               roomId,
               playerId,
               language: newLang,
-            })
+            }),
           );
           console.log(
-            `\x1b[90mℹ️  Solicitando troca de idioma para: ${newLang}\x1b[0m`
+            `\x1b[90mℹ️  Solicitando troca de idioma para: ${newLang}\x1b[0m`,
           );
         } else {
           console.log(`\x1b[91m❌ Use: /lang <código>\x1b[0m`);
+        }
+        rl.prompt(true);
+        return;
+      }
+
+      if (trimmed.startsWith("/name ")) {
+        const newName = trimmed.split(" ").slice(1).join(" ");
+        if (newName) {
+          ws.send(
+            JSON.stringify({
+              type: "change-name",
+              roomId,
+              playerId,
+              name: newName,
+            }),
+          );
+          console.log(
+            `\x1b[90mℹ️  Solicitando troca de nome para: ${newName}\x1b[0m`,
+          );
+        } else {
+          console.log(`\x1b[91m❌ Use: /name <novo_nome>\x1b[0m`);
         }
         rl.prompt(true);
         return;
@@ -119,7 +140,7 @@ async function main() {
           roomId,
           playerId, // O servidor usa isso para saber quem mandou
           content: line,
-        })
+        }),
       );
     }
     rl.prompt(true);

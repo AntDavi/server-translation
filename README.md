@@ -110,6 +110,19 @@ Permite alterar o idioma de recebimento sem precisar desconectar e reconectar.
 }
 ```
 
+### 5. Mudar de Nome (`change-name`)
+Permite alterar o nome de exibição sem precisar desconectar e reconectar.
+
+**Envio (Cliente -> Servidor):**
+```json
+{
+  "type": "change-name",
+  "roomId": "sala-01",
+  "playerId": "jogador-123",
+  "name": "NovoNome"
+}
+```
+
 ---
 
 ## 🧪 Como Testar

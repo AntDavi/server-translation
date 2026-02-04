@@ -112,6 +112,21 @@ wss.on("connection", (socket) => {
       }
     }
 
+    if (type === "change-name") {
+      const newName = payload.name ? payload.name.trim() : null;
+
+      if (roomId && playerId && newName) {
+        if (rooms[roomId] && rooms[roomId][playerId]) {
+          const oldName = rooms[roomId][playerId].name;
+          rooms[roomId][playerId].name = newName;
+
+          console.log(
+            `🔄 Player ${playerId} changed name from ${oldName} to ${newName}`,
+          );
+        }
+      }
+    }
+
     if (type === "message") {
       if (!rooms[roomId] || !rooms[roomId][playerId]) {
         return;
