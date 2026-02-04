@@ -7,7 +7,7 @@ const wss = new WebSocketServer({ port: 8080 });
 interface Player {
   socket: WebSocket;
   language: string;
-  //   name: string;
+  name: string;
 }
 
 interface Room {
@@ -69,7 +69,7 @@ wss.on("connection", (socket) => {
       rooms[roomId][playerId] = {
         socket,
         language: cleanLanguage,
-        // name: displayName,
+        name: displayName,
       };
 
       console.log(
@@ -119,7 +119,7 @@ wss.on("connection", (socket) => {
 
       const sender = rooms[roomId][playerId];
       const senderLanguage = sender.language;
-      //   const senderName = sender.name;
+      const senderName = sender.name;
 
       console.log(`💬 Message from ${playerId} in ${roomId}: ${content}`);
 
@@ -128,7 +128,7 @@ wss.on("connection", (socket) => {
       if (!currentRoom) return;
 
       for (const targetPlayerId in currentRoom) {
-        // if (targetPlayerId === playerId) continue;
+        if (targetPlayerId === playerId) continue;
 
         const targetPlayer = currentRoom[targetPlayerId];
 
@@ -147,7 +147,7 @@ wss.on("connection", (socket) => {
             const response = JSON.stringify({
               type: "message",
               fromId: playerId,
-              fromName: playerId, // Fallback to ID since name is removed
+              fromName: senderName,
               originalContent: content,
               translatedContent: translatedText,
               originalLanguage: senderLanguage,

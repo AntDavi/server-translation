@@ -54,7 +54,7 @@ const wss = new WebSocketServer({ port: 8080 });
 ```
 
 ### 1. Conectar e Entrar na Sala (`join`)
-Assim que conectar o socket, envie este JSON para registrar o jogador e identificar seu nome.
+Assim que conectar o socket, envie este JSON para registrar o jogador. Você pode enviar um campo `name` para definir seu nome de exibição. Se não for enviado, o `playerId` será usado como nome.
 
 **Envio (Cliente -> Servidor):**
 ```json
