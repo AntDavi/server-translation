@@ -138,6 +138,22 @@ wss.on("connection", (socket) => {
 
       console.log(`💬 Message from ${playerId} in ${roomId}: ${content}`);
 
+      // Echo: Send message back to sender
+      if (sender && sender.socket.readyState === WebSocket.OPEN) {
+        const echoResponse = JSON.stringify({
+          type: "message",
+          fromId: playerId,
+          fromName: senderName,
+          originalContent: content,
+          translatedContent: content,
+          originalLanguage: senderLanguage,
+          isEcho: true,
+        });
+
+        sender.socket.send(echoResponse);
+        console.log(`🔊 Echo sent to ${playerId}`);
+      }
+
       // Broadcast to other players in the room
       const currentRoom = rooms[roomId];
       if (!currentRoom) return;
