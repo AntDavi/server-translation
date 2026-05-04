@@ -40,7 +40,8 @@ function removePlayer(socket: WebSocket) {
 }
 
 wss.on("connection", (socket) => {
-  console.log("🔌 Client connected");
+  const clientId = Math.random().toString(36).slice(2, 8); // ID temporário para debug
+  console.log(`[CONNECT] New client connected (tempId=${clientId}). Total clients: ${wss.clients.size}`);
 
   socket.on("message", async (data) => {
     let payload;
@@ -48,23 +49,39 @@ wss.on("connection", (socket) => {
     try {
       payload = JSON.parse(data.toString());
     } catch (e) {
-      console.error("Failed to parse message", e);
+      console.error(`[PARSE] Failed to parse incoming message:`, data.toString(), e);
       return;
     }
 
     const { type, roomId, playerId, language, content } = payload;
 
+    console.log(`[RECV] type="${type}" roomId="${roomId}" playerId="${playerId}"`);
+
     if (type === "join") {
       const cleanLanguage = language ? language.trim() : null;
+
+      // Bug fix #3: responder com erro quando campos obrigatórios estão ausentes
       if (!roomId || !playerId || !cleanLanguage) {
+        console.warn(
+          `[JOIN] Rejecting join — missing fields. roomId=${roomId} playerId=${playerId} language=${language}`,
+        );
+        socket.send(
+          JSON.stringify({
+            type: "error",
+            code: "INVALID_JOIN",
+            message: "roomId, playerId and language are required.",
+          }),
+        );
         return;
       }
 
       if (!rooms[roomId]) {
         rooms[roomId] = {};
+        console.log(`[JOIN] Room "${roomId}" created`);
       }
 
       const displayName = payload.name || playerId;
+      const isRejoin = !!rooms[roomId][playerId];
 
       rooms[roomId][playerId] = {
         socket,
@@ -73,13 +90,24 @@ wss.on("connection", (socket) => {
       };
 
       console.log(
-        `👋 Player ${playerId} joined room ${roomId} [${cleanLanguage}]`,
+        `[JOIN] Player "${playerId}" (name="${displayName}") ${isRejoin ? "RE-joined" : "joined"} room "${roomId}" [language=${cleanLanguage}]`,
       );
 
-      // Notify others in room (optional, but good for feedback)
+      // Bug fix #3: confirmar o join para o cliente
+      socket.send(
+        JSON.stringify({
+          type: "join-success",
+          playerId,
+          roomId,
+          language: cleanLanguage,
+          name: displayName,
+        }),
+      );
+
+      // Notificar os outros jogadores da sala
       const joinMessage = JSON.stringify({
         type: "info",
-        content: `${playerId} joined the room.`,
+        content: `${displayName} joined the room.`,
       });
 
       const currentRoom = rooms[roomId];
@@ -100,35 +128,127 @@ wss.on("connection", (socket) => {
     if (type === "change-language") {
       const cleanLanguage = language ? language.trim() : null;
 
-      if (roomId && playerId && cleanLanguage) {
-        if (rooms[roomId] && rooms[roomId][playerId]) {
-          const oldLang = rooms[roomId][playerId].language;
-          rooms[roomId][playerId].language = cleanLanguage;
-
-          console.log(
-            `🔄 Player ${playerId} changed language from ${oldLang} to ${cleanLanguage}`,
-          );
-        }
+      // Bug fix #2: validar campos e responder com sucesso ou erro
+      if (!roomId || !playerId || !cleanLanguage) {
+        console.warn(
+          `[CHANGE-LANG] Missing fields. roomId=${roomId} playerId=${playerId} language=${language}`,
+        );
+        socket.send(
+          JSON.stringify({
+            type: "error",
+            code: "INVALID_CHANGE_LANGUAGE",
+            message: "roomId, playerId and language are required.",
+          }),
+        );
+        return;
       }
+
+      if (!rooms[roomId] || !rooms[roomId][playerId]) {
+        console.warn(
+          `[CHANGE-LANG] Player "${playerId}" not found in room "${roomId}" — language not updated`,
+        );
+        socket.send(
+          JSON.stringify({
+            type: "error",
+            code: "PLAYER_NOT_FOUND",
+            message: `Player "${playerId}" is not registered in room "${roomId}". Send a "join" first.`,
+          }),
+        );
+        return;
+      }
+
+      const oldLang = rooms[roomId][playerId].language;
+      rooms[roomId][playerId].language = cleanLanguage;
+
+      console.log(
+        `[CHANGE-LANG] Player "${playerId}" changed language: ${oldLang} → ${cleanLanguage}`,
+      );
+
+      socket.send(
+        JSON.stringify({
+          type: "language-changed",
+          playerId,
+          roomId,
+          language: cleanLanguage,
+        }),
+      );
     }
 
     if (type === "change-name") {
       const newName = payload.name ? payload.name.trim() : null;
 
-      if (roomId && playerId && newName) {
-        if (rooms[roomId] && rooms[roomId][playerId]) {
-          const oldName = rooms[roomId][playerId].name;
-          rooms[roomId][playerId].name = newName;
-
-          console.log(
-            `🔄 Player ${playerId} changed name from ${oldName} to ${newName}`,
-          );
-        }
+      if (!roomId || !playerId || !newName) {
+        console.warn(
+          `[CHANGE-NAME] Missing fields. roomId=${roomId} playerId=${playerId} name=${payload.name}`,
+        );
+        socket.send(
+          JSON.stringify({
+            type: "error",
+            code: "INVALID_CHANGE_NAME",
+            message: "roomId, playerId and name are required.",
+          }),
+        );
+        return;
       }
+
+      if (!rooms[roomId] || !rooms[roomId][playerId]) {
+        console.warn(
+          `[CHANGE-NAME] Player "${playerId}" not found in room "${roomId}" — name not updated`,
+        );
+        socket.send(
+          JSON.stringify({
+            type: "error",
+            code: "PLAYER_NOT_FOUND",
+            message: `Player "${playerId}" is not registered in room "${roomId}". Send a "join" first.`,
+          }),
+        );
+        return;
+      }
+
+      const oldName = rooms[roomId][playerId].name;
+      rooms[roomId][playerId].name = newName;
+
+      console.log(
+        `[CHANGE-NAME] Player "${playerId}" changed name: "${oldName}" → "${newName}"`,
+      );
+
+      socket.send(
+        JSON.stringify({
+          type: "name-changed",
+          playerId,
+          roomId,
+          name: newName,
+        }),
+      );
     }
 
     if (type === "message") {
-      if (!rooms[roomId] || !rooms[roomId][playerId]) {
+      // Bug fix: logar quando o jogador não está registrado (era silencioso antes)
+      if (!rooms[roomId]) {
+        console.warn(
+          `[MESSAGE] Room "${roomId}" not found — message from "${playerId}" dropped`,
+        );
+        socket.send(
+          JSON.stringify({
+            type: "error",
+            code: "ROOM_NOT_FOUND",
+            message: `Room "${roomId}" does not exist. Send a "join" first.`,
+          }),
+        );
+        return;
+      }
+
+      if (!rooms[roomId][playerId]) {
+        console.warn(
+          `[MESSAGE] Player "${playerId}" not registered in room "${roomId}" — message dropped`,
+        );
+        socket.send(
+          JSON.stringify({
+            type: "error",
+            code: "PLAYER_NOT_FOUND",
+            message: `Player "${playerId}" is not registered in room "${roomId}". Send a "join" first.`,
+          }),
+        );
         return;
       }
 
@@ -136,10 +256,12 @@ wss.on("connection", (socket) => {
       const senderLanguage = sender.language;
       const senderName = sender.name;
 
-      console.log(`💬 Message from ${playerId} in ${roomId}: ${content}`);
+      console.log(
+        `[MESSAGE] From "${senderName}" (${playerId}) [lang=${senderLanguage}] in room "${roomId}": "${content}"`,
+      );
 
-      // Echo: Send message back to sender
-      if (sender && sender.socket.readyState === WebSocket.OPEN) {
+      // Echo: devolver a mensagem original ao próprio remetente (sem tradução)
+      if (sender.socket.readyState === WebSocket.OPEN) {
         const echoResponse = JSON.stringify({
           type: "message",
           fromId: playerId,
@@ -151,28 +273,42 @@ wss.on("connection", (socket) => {
         });
 
         sender.socket.send(echoResponse);
-        console.log(`🔊 Echo sent to ${playerId}`);
+        console.log(
+          `[ECHO] Sent original text back to "${playerId}" [lang=${senderLanguage}]`,
+        );
       }
 
-      // Broadcast to other players in the room
+      // Broadcast: traduzir e enviar para cada outro jogador da sala
       const currentRoom = rooms[roomId];
       if (!currentRoom) return;
 
-      for (const targetPlayerId in currentRoom) {
-        if (targetPlayerId === playerId) continue;
+      const otherPlayers = Object.keys(currentRoom).filter(
+        (pid) => pid !== playerId,
+      );
 
+      console.log(
+        `[BROADCAST] Sending "${senderName}"'s message to ${otherPlayers.length} other player(s)`,
+      );
+
+      for (const targetPlayerId of otherPlayers) {
         const targetPlayer = currentRoom[targetPlayerId];
 
         if (targetPlayer && targetPlayer.socket.readyState === WebSocket.OPEN) {
           try {
+            // Bug fix #4: passar senderLanguage como `from` para ativar o short-circuit
+            // de mesmo idioma e evitar chamadas desnecessárias à API
             console.log(
-              `🔤 Translating from (auto) to ${targetPlayer.language}`,
+              `[TRANSLATE] "${playerId}" (${senderLanguage}) → "${targetPlayerId}" (${targetPlayer.language})`,
             );
-            // Translate message to target player's language
+
             const translatedText = await translate(
               content,
-              undefined,
+              senderLanguage,
               targetPlayer.language,
+            );
+
+            console.log(
+              `[TRANSLATE] Result for "${targetPlayerId}": "${translatedText}"`,
             );
 
             const response = JSON.stringify({
@@ -186,20 +322,29 @@ wss.on("connection", (socket) => {
 
             targetPlayer.socket.send(response);
           } catch (err) {
-            console.error("Translation error:", err);
+            console.error(
+              `[TRANSLATE] Error translating for "${targetPlayerId}":`,
+              err,
+            );
           }
+        } else {
+          console.warn(
+            `[BROADCAST] Skipping "${targetPlayerId}" — socket not open (state=${targetPlayer?.socket.readyState})`,
+          );
         }
       }
     }
   });
 
-  socket.on("close", () => {
-    console.log("🔌 Client disconnected");
+  socket.on("close", (code, reason) => {
+    console.log(
+      `[DISCONNECT] Client disconnected (tempId=${clientId}, code=${code}, reason="${reason.toString() || "none"}"). Remaining clients: ${wss.clients.size}`,
+    );
     removePlayer(socket);
   });
 
   socket.on("error", (err) => {
-    console.error("Socket error:", err);
+    console.error(`[SOCKET ERROR] (tempId=${clientId}):`, err.message);
   });
 });
 
